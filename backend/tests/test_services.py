@@ -3,7 +3,9 @@
 import pytest
 
 from app.exceptions import ServiceError
+from app.obfuscator.config import ObfuscatorConfigGenerator
 from app.services import ServiceManager
+from app.wireguard.config import WireGuardConfigGenerator
 
 
 class FakeConfig:
@@ -98,3 +100,29 @@ def test_apply_config_changes_removes_new_file_if_none_existed(tmp_path):
 
     assert not wg_path.exists()
     assert not obf_path.exists()
+
+
+def test_generate_configs_writes_custom_hooks(monkeypatch):
+    saved = {}
+    monkeypatch.setattr(
+        WireGuardConfigGenerator, "save_config_file",
+        staticmethod(lambda content, interface: saved.setdefault("wg", content)),
+    )
+    monkeypatch.setattr(ObfuscatorConfigGenerator, "save_config_file", staticmethod(lambda content: None))
+    config_manager = FakeConfig()
+    config_manager.main.update({
+        "server_private_key": "SERVER_PRIV",
+        "subnet": "10.6.13",
+        "own_ip": 1,
+        "wan_interface": "eth0",
+        "post_up": "ip route add 192.168.88.0/24 dev %i",
+        "pre_down": None,
+    })
+    ServiceManager(config_manager, None, None, None, "1.2.3.4", 51820).generate_configs()
+    lines = saved["wg"].split("\n")
+    assert [line for line in lines if line.startswith("PostUp = ")][-1] == (
+        "PostUp = ip route add 192.168.88.0/24 dev %i"
+    )
+    assert "PreUp" not in saved["wg"]
+    assert "PreDown" not in saved["wg"]
+    assert saved["wg"].count("PostDown = ") == 1

@@ -71,3 +71,49 @@ def test_patch_config_rejects_invalid_mtu(client, key, value):
     resp = client.patch("/api/config", headers=AUTH, json={key: value})
     assert resp.status_code == 400
     assert key in resp.get_json()["error"]
+
+
+HOOK_KEYS = ["pre_up", "post_up", "pre_down", "post_down"]
+
+
+def test_get_config_hooks_default_null(client):
+    body = client.get("/api/config", headers=AUTH).get_json()
+    for key in HOOK_KEYS:
+        assert body[key] is None
+
+
+def test_patch_config_sets_strips_and_clears_hooks(client, config_manager):
+    resp = client.patch("/api/config", headers=AUTH, json={
+        "post_up": "  ip route add 192.168.88.0/24 dev %i  ",
+        "pre_down": "\techo down",
+    })
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["post_up"] == "ip route add 192.168.88.0/24 dev %i"
+    assert body["pre_down"] == "echo down"
+    assert body["pre_up"] is None
+    assert config_manager.main["post_up"] == "ip route add 192.168.88.0/24 dev %i"
+
+    resp = client.patch("/api/config", headers=AUTH, json={"post_up": None, "pre_down": "   "})
+    assert resp.status_code == 200
+    assert config_manager.main["post_up"] is None
+    assert config_manager.main["pre_down"] is None
+
+
+def test_patch_config_accepts_max_length_hook(client, config_manager):
+    resp = client.patch("/api/config", headers=AUTH, json={"post_up": "x" * 2048})
+    assert resp.status_code == 200
+    assert config_manager.main["post_up"] == "x" * 2048
+
+
+@pytest.mark.parametrize("key", HOOK_KEYS)
+@pytest.mark.parametrize("value", [
+    1, True, ["echo"], {"cmd": "echo"},
+    "echo a\necho b", "echo a\recho b", "echo a\r\n[Peer]", "echo\n",
+    "x" * 2049,
+])
+def test_patch_config_rejects_invalid_hook(client, config_manager, key, value):
+    resp = client.patch("/api/config", headers=AUTH, json={key: value})
+    assert resp.status_code == 400
+    assert key in resp.get_json()["error"]
+    assert key not in config_manager.main

@@ -22,9 +22,21 @@ interface Config {
   client_mtu_direct_effective: number;
   client_mtu_obfuscated: number | null;
   client_mtu_obfuscated_effective: number;
+  pre_up: string | null;
+  post_up: string | null;
+  pre_down: string | null;
+  post_down: string | null;
 }
 
 const parseMtuInput = (value: string) => (value === '' ? null : parseInt(value, 10));
+const parseHookInput = (value: string) => (value === '' ? null : value);
+
+const HOOKS: { key: 'pre_up' | 'post_up' | 'pre_down' | 'post_down'; label: string }[] = [
+  { key: 'pre_up', label: 'PreUp' },
+  { key: 'post_up', label: 'PostUp' },
+  { key: 'pre_down', label: 'PreDown' },
+  { key: 'post_down', label: 'PostDown' },
+];
 
 export default function Config() {
   const { t } = useTranslation();
@@ -180,6 +192,10 @@ export default function Config() {
         mtu: config.mtu,
         client_mtu_direct: config.client_mtu_direct,
         client_mtu_obfuscated: config.client_mtu_obfuscated,
+        pre_up: config.pre_up,
+        post_up: config.post_up,
+        pre_down: config.pre_down,
+        post_down: config.post_down,
       });
       setSuccess(t('config.configUpdated'));
       await loadConfig();
@@ -494,6 +510,22 @@ export default function Config() {
             <div className="field-description">{t('config.clientMtuObfuscatedDescription')}</div>
           </div>
         )}
+
+        <h3 className="config-subheading">{t('config.wgHooks')}</h3>
+        <div className="field-description">{t('config.wgHooksDescription')}</div>
+        {HOOKS.map(({ key, label }) => (
+          <div className="form-group" key={key}>
+            <label>{label}</label>
+            <input
+              type="text"
+              value={config[key] ?? ''}
+              onChange={(e) => setConfig({ ...config, [key]: parseHookInput(e.target.value) })}
+              maxLength={2048}
+              placeholder={t('config.wgHookNotSet')}
+              className="mono"
+            />
+          </div>
+        ))}
 
         <div className="form-actions">
           <button onClick={handleSave} disabled={saving} className="btn-primary">

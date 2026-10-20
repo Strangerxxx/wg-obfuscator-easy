@@ -20,7 +20,7 @@ def test_server_config_skips_disabled_clients():
         "bob": {"ip": 3, "public_key": "PUB_B", "enabled": False},
     }
     out = WireGuardConfigGenerator.generate_server_config(
-        BASE_CONFIG, clients, external_port=51820, obfuscation=False, mtu=1420
+        BASE_CONFIG, clients, external_port=51820, obfuscation=False, mtu=1420, hooks={}
     )
     assert "PUB_A" in out
     assert "PUB_B" not in out
@@ -32,7 +32,7 @@ def test_server_config_includes_preshared_key():
         "alice": {"ip": 2, "public_key": "PUB_A", "enabled": True, "preshared_key": "PSK"},
     }
     out = WireGuardConfigGenerator.generate_server_config(
-        BASE_CONFIG, clients, external_port=51820, obfuscation=True, mtu=1420
+        BASE_CONFIG, clients, external_port=51820, obfuscation=True, mtu=1420, hooks={}
     )
     assert "PresharedKey = PSK" in out
 
@@ -42,7 +42,7 @@ def test_server_config_sanitises_client_name_newline():
         "evil\n[Peer]\nPublicKey = attacker": {"ip": 2, "public_key": "PUB_A", "enabled": True},
     }
     out = WireGuardConfigGenerator.generate_server_config(
-        BASE_CONFIG, clients, external_port=51820, obfuscation=False, mtu=1420
+        BASE_CONFIG, clients, external_port=51820, obfuscation=False, mtu=1420, hooks={}
     )
     # The forged section must not appear on its own line.
     assert "\nPublicKey = attacker" not in out
@@ -77,7 +77,7 @@ def test_obfuscator_client_config_target_and_key():
 
 def test_server_config_writes_mtu():
     out = WireGuardConfigGenerator.generate_server_config(
-        BASE_CONFIG, {}, external_port=51820, obfuscation=True, mtu=1396
+        BASE_CONFIG, {}, external_port=51820, obfuscation=True, mtu=1396, hooks={}
     )
     assert "\nMTU = 1396\n" in out
 
@@ -89,3 +89,40 @@ def test_client_config_writes_mtu():
         obfuscation=False, allowed_ips=["0.0.0.0/0"], mtu=1400,
     )
     assert "\nMTU = 1400\n" in out
+
+
+HOOKS = {
+    "pre_up": "echo pre-up %i",
+    "post_up": "ip route add 192.168.88.0/24 dev %i",
+    "pre_down": "echo pre-down %i",
+    "post_down": "ip route del 192.168.88.0/24 dev %i",
+}
+
+
+def test_server_config_writes_custom_hooks_after_builtin_rules():
+    clients = {"alice": {"ip": 2, "public_key": "PUB_A", "enabled": True}}
+    out = WireGuardConfigGenerator.generate_server_config(
+        BASE_CONFIG, clients, external_port=51820, obfuscation=False, mtu=1420, hooks=HOOKS
+    )
+    lines = out.split("\n")
+    post_up = [line for line in lines if line.startswith("PostUp = ")]
+    post_down = [line for line in lines if line.startswith("PostDown = ")]
+    assert post_up[0].startswith("PostUp = iptables -A FORWARD -i wg0")
+    assert post_up[1] == "PostUp = ip route add 192.168.88.0/24 dev %i"
+    assert post_down[0].startswith("PostDown = iptables -D FORWARD -i wg0")
+    assert post_down[1] == "PostDown = ip route del 192.168.88.0/24 dev %i"
+    assert "PreUp = echo pre-up %i" in lines
+    assert "PreDown = echo pre-down %i" in lines
+    # Hooks belong to [Interface], before the first [Peer]
+    assert lines.index("PostDown = ip route del 192.168.88.0/24 dev %i") < lines.index("[Peer]")
+
+
+def test_server_config_omits_unset_hooks():
+    hooks = {"pre_up": None, "post_up": "echo up", "pre_down": None, "post_down": None}
+    out = WireGuardConfigGenerator.generate_server_config(
+        BASE_CONFIG, {}, external_port=51820, obfuscation=False, mtu=1420, hooks=hooks
+    )
+    assert "PreUp" not in out
+    assert "PreDown" not in out
+    assert out.count("PostUp = ") == 2
+    assert out.count("PostDown = ") == 1

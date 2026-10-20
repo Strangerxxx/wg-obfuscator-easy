@@ -711,6 +711,42 @@ paths:
                   description: >-
                     MTU in client configs for obfuscated connections. Null means compute it
                     from the client's masking type.
+                pre_up:
+                  type: string
+                  nullable: true
+                  maxLength: 2048
+                  description: >-
+                    Custom wg-quick PreUp command for the server WireGuard interface. Runs as
+                    root inside the container; %i is replaced with the interface name. Must
+                    not contain line breaks.
+                    Surrounding whitespace is stripped; null or an empty string removes it.
+                post_up:
+                  type: string
+                  nullable: true
+                  maxLength: 2048
+                  description: >-
+                    Custom wg-quick PostUp command for the server WireGuard interface, written
+                    after the built-in PostUp rules. Runs as root inside the container;
+                    %i is replaced with the interface name. Must not contain line breaks.
+                    Surrounding whitespace is stripped; null or an empty string removes it.
+                pre_down:
+                  type: string
+                  nullable: true
+                  maxLength: 2048
+                  description: >-
+                    Custom wg-quick PreDown command for the server WireGuard interface. Runs as
+                    root inside the container; %i is replaced with the interface name. Must
+                    not contain line breaks.
+                    Surrounding whitespace is stripped; null or an empty string removes it.
+                post_down:
+                  type: string
+                  nullable: true
+                  maxLength: 2048
+                  description: >-
+                    Custom wg-quick PostDown command for the server WireGuard interface, written
+                    after the built-in PostDown rules. Runs as root inside the container;
+                    %i is replaced with the interface name. Must not contain line breaks.
+                    Surrounding whitespace is stripped; null or an empty string removes it.
       responses:
         '200':
           description: Configuration updated successfully
@@ -1230,6 +1266,26 @@ components:
           description: >-
             MTU written to client configs with obfuscated connections that use the
             default masking type
+        pre_up:
+          type: string
+          nullable: true
+          maxLength: 2048
+          description: Custom wg-quick PreUp command for the server WireGuard interface. Null when not set.
+        post_up:
+          type: string
+          nullable: true
+          maxLength: 2048
+          description: Custom wg-quick PostUp command for the server WireGuard interface. Null when not set.
+        pre_down:
+          type: string
+          nullable: true
+          maxLength: 2048
+          description: Custom wg-quick PreDown command for the server WireGuard interface. Null when not set.
+        post_down:
+          type: string
+          nullable: true
+          maxLength: 2048
+          description: Custom wg-quick PostDown command for the server WireGuard interface. Null when not set.
 
     ServerStatus:
       type: object

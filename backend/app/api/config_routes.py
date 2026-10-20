@@ -22,7 +22,8 @@ import logging
 
 from ..config.constants import (
     DEFAULT_VERBOSITY_LEVEL, DEFAULT_MASKING_TYPE,
-    VERBOSITY_LEVELS, MASKING_TYPES, MIN_MTU, MAX_MTU
+    VERBOSITY_LEVELS, MASKING_TYPES, MIN_MTU, MAX_MTU,
+    WG_HOOKS, MAX_WG_HOOK_LENGTH
 )
 from ..exceptions import ConfigValidationError, ServiceError
 from ..auth.tokens import require_auth
@@ -66,7 +67,11 @@ def _config_response(config, external_ip, external_port):
         "client_mtu_direct_effective": get_effective_client_mtu(config, {}, obfuscation=False),
         "client_mtu_obfuscated": _optional_int_value(config, "client_mtu_obfuscated"),
         # Per-client masking overrides may differ; this is the value for the default masking
-        "client_mtu_obfuscated_effective": get_effective_client_mtu(config, {}, obfuscation=True)
+        "client_mtu_obfuscated_effective": get_effective_client_mtu(config, {}, obfuscation=True),
+        "pre_up": config.get("pre_up"),
+        "post_up": config.get("post_up"),
+        "pre_down": config.get("pre_down"),
+        "post_down": config.get("post_down")
     }
 
 
@@ -230,6 +235,22 @@ def update_config():
             ):
                 return jsonify({"error": f"{mtu_key} must be an integer between {MIN_MTU} and {MAX_MTU} or null"}), 400
             config_manager.set(mtu_key, mtu, save=False)
+            updated = True
+
+        for hook_key in WG_HOOKS:
+            if hook_key not in data:
+                continue
+            hook = data[hook_key]
+            if hook is not None:
+                if not isinstance(hook, str):
+                    return jsonify({"error": f"{hook_key} must be a string or null"}), 400
+                # A line break would inject extra lines or sections into the generated wg0.conf
+                if "\r" in hook or "\n" in hook:
+                    return jsonify({"error": f"{hook_key} must not contain line breaks"}), 400
+                hook = hook.strip() or None
+                if hook is not None and len(hook) > MAX_WG_HOOK_LENGTH:
+                    return jsonify({"error": f"{hook_key} must be at most {MAX_WG_HOOK_LENGTH} characters long"}), 400
+            config_manager.set(hook_key, hook, save=False)
             updated = True
         
         if updated:

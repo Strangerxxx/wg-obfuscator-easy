@@ -18,9 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """WireGuard configuration file generation"""
 
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
-from ..config.constants import INTERNAL_WG_PORT
+from ..config.constants import INTERNAL_WG_PORT, WG_HOOKS
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,8 @@ class WireGuardConfigGenerator:
         clients: Dict,
         external_port: int,
         obfuscation: bool,
-        mtu: int
+        mtu: int,
+        hooks: Dict[str, Optional[str]]
     ) -> str:
         """
         Generate WireGuard server configuration file content
@@ -45,6 +46,7 @@ class WireGuardConfigGenerator:
             external_port: External port number
             obfuscation: Whether obfuscation is enabled
             mtu: Server interface MTU
+            hooks: Custom wg-quick hooks by WG_HOOKS key; missing or None means not set
             
         Returns:
             Configuration file content as string
@@ -71,6 +73,10 @@ class WireGuardConfigGenerator:
             f"iptables -D FORWARD -o {config['wg_interface']} -j ACCEPT; "
             f"iptables -t nat -D POSTROUTING -o {config['wan_interface']} -j MASQUERADE"
         )
+        # wg-quick runs repeated hook lines in order, so custom hooks run after the built-in rules
+        for hook_key, wg_quick_option in WG_HOOKS.items():
+            if hooks.get(hook_key) is not None:
+                lines.append(f"{wg_quick_option} = {hooks[hook_key]}")
         
         for client_name, client in clients.items():
             # Skip disabled clients

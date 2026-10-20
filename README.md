@@ -179,6 +179,7 @@ After you edit **General Settings**, click **Save**.
 - **Server MTU** — MTU of the server WireGuard interface. Leave empty for automatic: `1420` without obfuscation, `1420` minus the masking overhead when **Disallow Other Masking** is on (`STUN` adds 24 bytes), otherwise `1396` because clients may use any masking.
 - **Client MTU (Direct Connection)** — `MTU` written to client configs that connect without the obfuscator. Empty means `1420`.
 - **Client MTU (Obfuscated Connection)** — `MTU` written to client configs that connect through the obfuscator. Empty means `1420` minus the overhead of the client's masking type (`1396` for `STUN`, `1420` for `NONE`). Devices need a new config after a change.
+- **Advanced: WireGuard Hooks** — optional `PreUp`, `PostUp`, `PreDown`, `PostDown` commands for the server WireGuard interface, e.g. `ip route add 192.168.88.0/24 dev %i`. They run as root inside the container; `%i` is the interface name. The built-in firewall rules run first. Leave empty to skip. If a `PreUp` or `PostUp` command fails on **Save**, the error is shown and the previous WireGuard config is restored, but the new value stays saved — fix or clear it.
 
 #### WireGuard server keys
 

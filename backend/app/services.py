@@ -26,7 +26,7 @@ from .wireguard.manager import WireGuardManager
 from .wireguard.mtu import get_effective_server_mtu
 from .obfuscator.config import ObfuscatorConfigGenerator
 from .obfuscator.manager import ObfuscatorManager
-from .config.constants import INTERNAL_WG_PORT, WG_OBFUSCATOR_CONFIG_FILE
+from .config.constants import INTERNAL_WG_PORT, WG_OBFUSCATOR_CONFIG_FILE, WG_HOOKS
 from .exceptions import ServiceError
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,8 @@ class ServiceManager:
             clients=clients,
             external_port=listen_port,
             obfuscation=config.get('obfuscation', False),
-            mtu=get_effective_server_mtu(config)
+            mtu=get_effective_server_mtu(config),
+            hooks={hook_key: config.get(hook_key) for hook_key in WG_HOOKS}
         )
         WireGuardConfigGenerator.save_config_file(
             wg_config_content,

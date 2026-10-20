@@ -73,6 +73,17 @@
   font-size: 0.85rem;
 }
 
+.config-subheading {
+  font-size: 1.1rem;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-main);
+}
+
+.config-subheading + .field-description {
+  margin-bottom: 1rem;
+}
+
 .field-description {
   display: block;
   margin-top: 0.5rem;

@@ -68,6 +68,15 @@ MASKING_OVERHEAD = {
     "STUN": STUN_MASKING_OVERHEAD,
 }
 
+# Custom wg-quick hooks for the server interface: config key -> wg-quick option
+WG_HOOKS = {
+    "pre_up": "PreUp",
+    "post_up": "PostUp",
+    "pre_down": "PreDown",
+    "post_down": "PostDown",
+}
+MAX_WG_HOOK_LENGTH = 2048
+
 # Token expiration
 TOKEN_EXPIRES_IN = 86400  # 24 hours in seconds
 
