@@ -20,7 +20,7 @@ def test_server_config_skips_disabled_clients():
         "bob": {"ip": 3, "public_key": "PUB_B", "enabled": False},
     }
     out = WireGuardConfigGenerator.generate_server_config(
-        BASE_CONFIG, clients, external_port=51820, obfuscation=False
+        BASE_CONFIG, clients, external_port=51820, obfuscation=False, mtu=1420
     )
     assert "PUB_A" in out
     assert "PUB_B" not in out
@@ -32,7 +32,7 @@ def test_server_config_includes_preshared_key():
         "alice": {"ip": 2, "public_key": "PUB_A", "enabled": True, "preshared_key": "PSK"},
     }
     out = WireGuardConfigGenerator.generate_server_config(
-        BASE_CONFIG, clients, external_port=51820, obfuscation=True
+        BASE_CONFIG, clients, external_port=51820, obfuscation=True, mtu=1420
     )
     assert "PresharedKey = PSK" in out
 
@@ -42,7 +42,7 @@ def test_server_config_sanitises_client_name_newline():
         "evil\n[Peer]\nPublicKey = attacker": {"ip": 2, "public_key": "PUB_A", "enabled": True},
     }
     out = WireGuardConfigGenerator.generate_server_config(
-        BASE_CONFIG, clients, external_port=51820, obfuscation=False
+        BASE_CONFIG, clients, external_port=51820, obfuscation=False, mtu=1420
     )
     # The forged section must not appear on its own line.
     assert "\nPublicKey = attacker" not in out
@@ -52,7 +52,7 @@ def test_client_config_obfuscation_uses_localhost():
     client = {"ip": 2, "private_key": "PRIV", "obfuscator_port": 13255}
     out = WireGuardConfigGenerator.generate_client_config(
         BASE_CONFIG, client, "vpn.example.com", 51820,
-        obfuscation=True, allowed_ips=["0.0.0.0/0"],
+        obfuscation=True, allowed_ips=["0.0.0.0/0"], mtu=1420,
     )
     assert "Endpoint = 127.0.0.1:13255" in out
 
@@ -61,7 +61,7 @@ def test_client_config_direct_uses_external_endpoint():
     client = {"ip": 2, "private_key": "PRIV"}
     out = WireGuardConfigGenerator.generate_client_config(
         BASE_CONFIG, client, "vpn.example.com", 51820,
-        obfuscation=False, allowed_ips=["0.0.0.0/0"],
+        obfuscation=False, allowed_ips=["0.0.0.0/0"], mtu=1420,
     )
     assert "Endpoint = vpn.example.com:51820" in out
 
@@ -73,3 +73,19 @@ def test_obfuscator_client_config_target_and_key():
     )
     assert "target = vpn.example.com:51820" in out
     assert "key = SECRETKEY" in out
+
+
+def test_server_config_writes_mtu():
+    out = WireGuardConfigGenerator.generate_server_config(
+        BASE_CONFIG, {}, external_port=51820, obfuscation=True, mtu=1396
+    )
+    assert "\nMTU = 1396\n" in out
+
+
+def test_client_config_writes_mtu():
+    client = {"ip": 2, "private_key": "PRIV"}
+    out = WireGuardConfigGenerator.generate_client_config(
+        BASE_CONFIG, client, "vpn.example.com", 51820,
+        obfuscation=False, allowed_ips=["0.0.0.0/0"], mtu=1400,
+    )
+    assert "\nMTU = 1400\n" in out

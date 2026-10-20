@@ -33,7 +33,8 @@ class WireGuardConfigGenerator:
         config: Dict,
         clients: Dict,
         external_port: int,
-        obfuscation: bool
+        obfuscation: bool,
+        mtu: int
     ) -> str:
         """
         Generate WireGuard server configuration file content
@@ -43,6 +44,7 @@ class WireGuardConfigGenerator:
             clients: Clients configuration dictionary
             external_port: External port number
             obfuscation: Whether obfuscation is enabled
+            mtu: Server interface MTU
             
         Returns:
             Configuration file content as string
@@ -58,6 +60,7 @@ class WireGuardConfigGenerator:
             lines.append(f"ListenPort = {INTERNAL_WG_PORT}")
         
         lines.append(f"Address = {config['subnet']}.{config['own_ip']}/24")
+        lines.append(f"MTU = {mtu}")
         lines.append(
             f"PostUp = iptables -A FORWARD -i {config['wg_interface']} -j ACCEPT; "
             f"iptables -A FORWARD -o {config['wg_interface']} -j ACCEPT; "
@@ -97,6 +100,7 @@ class WireGuardConfigGenerator:
         external_port: int,
         obfuscation: bool,
         allowed_ips: List[str],
+        mtu: int,
         default_obfuscator_port: int = 13255
     ) -> str:
         """
@@ -109,6 +113,7 @@ class WireGuardConfigGenerator:
             external_port: External port number
             obfuscation: Whether obfuscation is enabled
             allowed_ips: List of allowed IP ranges
+            mtu: Client interface MTU
             default_obfuscator_port: Default obfuscator port for client
             
         Returns:
@@ -118,6 +123,7 @@ class WireGuardConfigGenerator:
         lines.append("[Interface]")
         lines.append(f"PrivateKey = {client['private_key']}")
         lines.append(f"Address = {config['subnet']}.{client['ip']}/32")
+        lines.append(f"MTU = {mtu}")
         lines.append("")
         lines.append("[Peer]")
         lines.append(f"PublicKey = {config['server_public_key']}")

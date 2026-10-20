@@ -176,6 +176,9 @@ After you edit **General Settings**, click **Save**.
 - **Default Masking** — `NONE` (obfuscated, no extra disguise) or `STUN` (looks more like video-call traffic). If WireGuard is blocked, try `STUN`.
 - **Disallow Other Masking** — clients cannot pick a different masking type.
 - **Obfuscator Log Verbosity Level** — how detailed the **server** logs are (shown on the Dashboard). `INFO` is fine for daily use.
+- **Server MTU** — MTU of the server WireGuard interface. Leave empty for automatic: `1420` without obfuscation, `1420` minus the masking overhead when **Disallow Other Masking** is on (`STUN` adds 24 bytes), otherwise `1396` because clients may use any masking.
+- **Client MTU (Direct Connection)** — `MTU` written to client configs that connect without the obfuscator. Empty means `1420`.
+- **Client MTU (Obfuscated Connection)** — `MTU` written to client configs that connect through the obfuscator. Empty means `1420` minus the overhead of the client's masking type (`1396` for `STUN`, `1420` for `NONE`). Devices need a new config after a change.
 
 #### WireGuard server keys
 

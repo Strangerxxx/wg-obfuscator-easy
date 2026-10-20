@@ -22,23 +22,26 @@ import logging
 
 from ..config.constants import (
     DEFAULT_VERBOSITY_LEVEL, DEFAULT_MASKING_TYPE,
-    VERBOSITY_LEVELS, MASKING_TYPES
+    VERBOSITY_LEVELS, MASKING_TYPES, MIN_MTU, MAX_MTU
 )
 from ..exceptions import ConfigValidationError, ServiceError
 from ..auth.tokens import require_auth
 from ..utils import is_valid_obfuscation_key
+from ..wireguard.mtu import get_effective_server_mtu, get_effective_client_mtu
 from .errors import error_response
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint('config', __name__)
 
+MTU_KEYS = ("mtu", "client_mtu_direct", "client_mtu_obfuscated")
 
-def _listen_port_value(config):
-    listen_port = config.get("listen_port")
-    if listen_port is None:
+
+def _optional_int_value(config, key):
+    value = config.get(key)
+    if value is None:
         return None
-    return int(listen_port)
+    return int(value)
 
 
 def _config_response(config, external_ip, external_port):
@@ -46,7 +49,7 @@ def _config_response(config, external_ip, external_port):
     return {
         "external_ip": external_ip,
         "external_port": external_port,
-        "listen_port": _listen_port_value(config),
+        "listen_port": _optional_int_value(config, "listen_port"),
         "server_public_key": config.get("server_public_key"),
         "subnet": f"{subnet}.0/24" if subnet else None,
         "server_ip": f"{config['subnet']}.{config['own_ip']}",
@@ -56,7 +59,14 @@ def _config_response(config, external_ip, external_port):
         "obfuscation_key": config.get("obfuscation_key", ""),
         "masking_type": config.get("masking_type", DEFAULT_MASKING_TYPE),
         "masking_forced": config.get("masking_forced", False),
-        "verbosity_level": config.get("verbosity_level", DEFAULT_VERBOSITY_LEVEL)
+        "verbosity_level": config.get("verbosity_level", DEFAULT_VERBOSITY_LEVEL),
+        "mtu": _optional_int_value(config, "mtu"),
+        "mtu_effective": get_effective_server_mtu(config),
+        "client_mtu_direct": _optional_int_value(config, "client_mtu_direct"),
+        "client_mtu_direct_effective": get_effective_client_mtu(config, {}, obfuscation=False),
+        "client_mtu_obfuscated": _optional_int_value(config, "client_mtu_obfuscated"),
+        # Per-client masking overrides may differ; this is the value for the default masking
+        "client_mtu_obfuscated_effective": get_effective_client_mtu(config, {}, obfuscation=True)
     }
 
 
@@ -210,6 +220,17 @@ def update_config():
             else:
                 config_manager.set("listen_port", listen_port, save=False)
                 updated = True
+
+        for mtu_key in MTU_KEYS:
+            if mtu_key not in data:
+                continue
+            mtu = data[mtu_key]
+            if mtu is not None and (
+                isinstance(mtu, bool) or not isinstance(mtu, int) or mtu < MIN_MTU or mtu > MAX_MTU
+            ):
+                return jsonify({"error": f"{mtu_key} must be an integer between {MIN_MTU} and {MAX_MTU} or null"}), 400
+            config_manager.set(mtu_key, mtu, save=False)
+            updated = True
         
         if updated:
             config_manager.save_config()

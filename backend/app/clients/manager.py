@@ -30,6 +30,7 @@ from ..database import get_allocated_ips
 from ..exceptions import ClientAlreadyExistsError, ClientNotFoundError, ServiceError
 from ..wireguard.manager import WireGuardManager
 from ..wireguard.config import WireGuardConfigGenerator
+from ..wireguard.mtu import get_effective_client_mtu
 from ..obfuscator.config import ObfuscatorConfigGenerator
 from ..obfuscator.manager import ObfuscatorManager
 
@@ -334,6 +335,7 @@ class ClientManager:
             external_port=external_port,
             obfuscation=obfuscation,
             allowed_ips=allowed_ips,
+            mtu=get_effective_client_mtu(config, client, obfuscation),
             default_obfuscator_port=DEFAULT_CLIENT_OBFUSCATOR_PORT
         )
     

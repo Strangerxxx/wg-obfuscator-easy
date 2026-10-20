@@ -16,7 +16,15 @@ interface Config {
   verbosity_level: string;
   masking_type: string;
   masking_forced: boolean;
+  mtu: number | null;
+  mtu_effective: number;
+  client_mtu_direct: number | null;
+  client_mtu_direct_effective: number;
+  client_mtu_obfuscated: number | null;
+  client_mtu_obfuscated_effective: number;
 }
+
+const parseMtuInput = (value: string) => (value === '' ? null : parseInt(value, 10));
 
 export default function Config() {
   const { t } = useTranslation();
@@ -169,6 +177,9 @@ export default function Config() {
         verbosity_level: config.verbosity_level,
         masking_type: config.masking_type,
         masking_forced: config.masking_forced,
+        mtu: config.mtu,
+        client_mtu_direct: config.client_mtu_direct,
+        client_mtu_obfuscated: config.client_mtu_obfuscated,
       });
       setSuccess(t('config.configUpdated'));
       await loadConfig();
@@ -441,6 +452,47 @@ export default function Config() {
               <div className="field-description">{t('config.verbosityLevelDescription')}</div>
             </div>
           </>
+        )}
+
+        <div className="form-group">
+          <label>{t('config.mtu')}</label>
+          <input
+            type="number"
+            value={config.mtu ?? ''}
+            onChange={(e) => setConfig({ ...config, mtu: parseMtuInput(e.target.value) })}
+            min={1280}
+            max={1500}
+            placeholder={t('config.mtuAuto', { value: config.mtu_effective })}
+          />
+          <div className="field-description">{t('config.mtuDescription')}</div>
+        </div>
+
+        <div className="form-group">
+          <label>{t('config.clientMtuDirect')}</label>
+          <input
+            type="number"
+            value={config.client_mtu_direct ?? ''}
+            onChange={(e) => setConfig({ ...config, client_mtu_direct: parseMtuInput(e.target.value) })}
+            min={1280}
+            max={1500}
+            placeholder={t('config.mtuAuto', { value: config.client_mtu_direct_effective })}
+          />
+          <div className="field-description">{t('config.clientMtuDirectDescription')}</div>
+        </div>
+
+        {config.obfuscation && (
+          <div className="form-group">
+            <label>{t('config.clientMtuObfuscated')}</label>
+            <input
+              type="number"
+              value={config.client_mtu_obfuscated ?? ''}
+              onChange={(e) => setConfig({ ...config, client_mtu_obfuscated: parseMtuInput(e.target.value) })}
+              min={1280}
+              max={1500}
+              placeholder={t('config.mtuAuto', { value: config.client_mtu_obfuscated_effective })}
+            />
+            <div className="field-description">{t('config.clientMtuObfuscatedDescription')}</div>
+          </div>
         )}
 
         <div className="form-actions">

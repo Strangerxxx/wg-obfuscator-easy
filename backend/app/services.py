@@ -23,6 +23,7 @@ from typing import Dict, List, Optional
 
 from .wireguard.config import WireGuardConfigGenerator
 from .wireguard.manager import WireGuardManager
+from .wireguard.mtu import get_effective_server_mtu
 from .obfuscator.config import ObfuscatorConfigGenerator
 from .obfuscator.manager import ObfuscatorManager
 from .config.constants import INTERNAL_WG_PORT, WG_OBFUSCATOR_CONFIG_FILE
@@ -63,7 +64,8 @@ class ServiceManager:
             config=config,
             clients=clients,
             external_port=listen_port,
-            obfuscation=config.get('obfuscation', False)
+            obfuscation=config.get('obfuscation', False),
+            mtu=get_effective_server_mtu(config)
         )
         WireGuardConfigGenerator.save_config_file(
             wg_config_content,

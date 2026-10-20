@@ -689,6 +689,28 @@ paths:
                     Only affects the port inside the container: Docker port publishing is
                     fixed at container creation, so the port must already be forwarded to
                     the container or clients will not be able to connect.
+                mtu:
+                  type: integer
+                  nullable: true
+                  minimum: 1280
+                  maximum: 1500
+                  description: >-
+                    MTU of the server WireGuard interface. Null means compute it from the
+                    masking settings.
+                client_mtu_direct:
+                  type: integer
+                  nullable: true
+                  minimum: 1280
+                  maximum: 1500
+                  description: MTU in client configs for direct connections. Null means 1420.
+                client_mtu_obfuscated:
+                  type: integer
+                  nullable: true
+                  minimum: 1280
+                  maximum: 1500
+                  description: >-
+                    MTU in client configs for obfuscated connections. Null means compute it
+                    from the client's masking type.
       responses:
         '200':
           description: Configuration updated successfully
@@ -1173,6 +1195,41 @@ components:
           type: string
           enum: [ERROR, WARNING, INFO, DEBUG, TRACE]
           description: Obfuscator log verbosity level
+        mtu:
+          type: integer
+          nullable: true
+          minimum: 1280
+          maximum: 1500
+          description: >-
+            Stored MTU of the server WireGuard interface. Null means compute it from
+            the masking settings: 1420 without obfuscation, 1420 minus the masking
+            overhead when masking is forced, otherwise 1420 minus the largest masking
+            overhead.
+        mtu_effective:
+          type: integer
+          description: MTU applied to the server WireGuard interface
+        client_mtu_direct:
+          type: integer
+          nullable: true
+          minimum: 1280
+          maximum: 1500
+          description: Stored MTU for client configs with direct connections. Null means 1420.
+        client_mtu_direct_effective:
+          type: integer
+          description: MTU written to client configs with direct connections
+        client_mtu_obfuscated:
+          type: integer
+          nullable: true
+          minimum: 1280
+          maximum: 1500
+          description: >-
+            Stored MTU for client configs with obfuscated connections. Null means 1420
+            minus the overhead of the client's masking type (STUN adds 24 bytes).
+        client_mtu_obfuscated_effective:
+          type: integer
+          description: >-
+            MTU written to client configs with obfuscated connections that use the
+            default masking type
 
     ServerStatus:
       type: object

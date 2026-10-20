@@ -58,6 +58,16 @@ MASKING_TYPES_NAMES = {
     "AUTO": "Auto",
 }
 
+# MTU configuration
+DEFAULT_WG_MTU = 1420  # wg-quick default, leaves room for WireGuard over IPv6
+MIN_MTU = 1280
+MAX_MTU = 1500
+STUN_MASKING_OVERHEAD = 24  # STUN_WRAP_OVERHEAD in wg-obfuscator's masking_stun.c
+MASKING_OVERHEAD = {
+    "NONE": 0,
+    "STUN": STUN_MASKING_OVERHEAD,
+}
+
 # Token expiration
 TOKEN_EXPIRES_IN = 86400  # 24 hours in seconds
 
